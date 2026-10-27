@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#ffffff">
-<meta name="data-app-snapshot-sha256" content="7d1cf2fe4d19f3f01b3616e958293eb3f87a7a3d215098f5c60e4ab3a133f74e">
+<meta name="data-app-snapshot-sha256" content="be1b688a4e79584e3191b8012dfa9e9eb90e40501009bed1e2463055251629bb">
 <meta name="data-app-runtime-sha256" content="b1771584910da746d0cf1b967a4889fee226053d841596104b457a04a2dd3d91">
 <meta name="data-app-bootstrap" content="deferred-content-v1">
 
@@ -73,7 +73,7 @@ const COMPANIES=[...CORE_COMPANIES,...ADDED_COMPANIES];
 const MAIN_COMPETITORS=COMPANIES.filter(company=>company!=='Колесо.ру');
 const SPB_LOCAL_COMPETITORS=['Эксклюзив (ty.ru)','Колесо (koleso-russia.ru)'];
 const LOCAL_COMPETITORS=[...SPB_LOCAL_COMPETITORS,'63 колеса','700 шин','74 колеса (АдВента)','Автопартнер','Автошина','Автошина24','Запасное колесо','Колекс','Красшина','Мир колёс','Римэкс','Вирбак','Пин-авто','Виктория','Дакар'];
-const matchesDiameter=(row,diameter)=>row.diameterUndifferentiated===true||(Number.isFinite(row.rmin)&&Number.isFinite(row.rmax)&&row.rmin<=diameter&&row.rmax>=diameter);
+const matchesDiameter=(row,diameter)=>row.diameterUndifferentiated===true||((Number.isFinite(row.rmin)?row.rmin<=diameter:row.diameterLowerOpen===true)&&(Number.isFinite(row.rmax)?row.rmax>=diameter:row.diameterUpperOpen===true));
 const scopeLabels={city:'Город',region:'Охват',diameter:'Диаметр',type:'Вид хранения',period:'Срок',company:'Компания',location:'Территория акции'};
 const describeScope=scope=>Object.entries(scope).filter(([,value])=>value!==undefined&&value!=='all').flatMap(([field,value])=>field==='diameter'
  ?[{field:'rmin',label:'Нижняя граница тарифа',value:`не выше ${value}`},{field:'rmax',label:'Верхняя граница тарифа',value:`не ниже ${value}`}]
@@ -129,7 +129,7 @@ function LocalReview({city}){
  const {queries,snapshot}=dataApp.useDataApp();
  const rows=(queries.competitor_review?.rows||[]).filter(r=>city==='all'||r.city===city).map(r=>({...r,priceEvidence:coverageEvidence(queries.tariffs?.rows||[],r.city,r.company,snapshot.refresh?.date)}));
  if(!rows.length)return null;
- return jsxRuntime.jsxs('details', { className: "ks-memo", children: [jsxRuntime.jsxs('summary', { children: ["Проверка списка конкурентов · "    , rows.length]}), jsxRuntime.jsxs(dataApp.DataComponent, { id: "local-player-review", queryId: "competitor_review", kind: "table", variant: "plain", title: "Что удалось подтвердить"  , displayRows: rows, sourceRows: rows, scopeFilters: describeScope({city}), children: [jsxRuntime.jsx('p', { className: "ks-table-note", children: "Ненайденная информация не означает отсутствия услуги. Цены «от», оплата за фактический срок и предложения без раскрытого периода не включены в разницу точных тарифов."                      }), jsxRuntime.jsx(dataApp.DataTable, { label: "Проверка списка конкурентов"  , rows: rows, rowKey: "id", columns: [{field:'city',label:'Город'},{field:'company',label:'Компания',renderCell:renderCompanyName},{field:'group',label:'Группа'},{field:'result',label:'Результат прежней проверки'},{field:'priceEvidence',label:'Тарифы в текущем снимке'},{field:'note',label:'Цена и ограничения'},{field:'checkStatus',label:'Перепроверка'},{field:'date',label:'Дата сведений'},{field:'source',label:'Источник',renderCell:v=>v?jsxRuntime.jsx('a', { href: v, target: "_blank", rel: "noreferrer", children: "Открыть ↗" }):'—'}],})]})]});
+ return jsxRuntime.jsxs('details', { className: "ks-memo", children: [jsxRuntime.jsxs('summary', { children: ["Проверка списка конкурентов · "    , rows.length]}), jsxRuntime.jsxs(dataApp.DataComponent, { id: "local-player-review", queryId: "competitor_review", kind: "table", variant: "plain", title: "Что удалось подтвердить"  , displayRows: rows, sourceRows: rows, scopeFilters: describeScope({city}), children: [jsxRuntime.jsx('p', { className: "ks-table-note", children: "Ненайденная информация не означает отсутствия услуги. Цены «от», оплата за фактический срок и предложения без раскрытого периода не включены в разницу точных тарифов."                      }), jsxRuntime.jsx(dataApp.DataTable, { label: "Проверка списка конкурентов"  , rows: rows, rowKey: "id", columns: [{field:'city',label:'Город'},{field:'company',label:'Компания',renderCell:renderCompanyName},{field:'group',label:'Группа'},{field:'result',label:'Статус услуги'},{field:'priceEvidence',label:'Тарифы в текущем снимке'},{field:'note',label:'Цена и ограничения'},{field:'checkStatus',label:'Перепроверка'},{field:'date',label:'Дата сведений'},{field:'listCheckedAt',label:'Сверка со списком'},{field:'source',label:'Источник',renderCell:v=>v?jsxRuntime.jsx('a', { href: v, target: "_blank", rel: "noreferrer", children: "Открыть ↗" }):'—'}],})]})]});
 }
 
 function AdditionalOffers({city,diameter,type,period}){
@@ -196,7 +196,8 @@ function DifferencePage(){
  const {snapshot,queries,chartStates,updateChartState,filters,setFilter}=dataApp.useDataApp();
  const state=chartStates?.['difference-matrix']?.inlineFilters||{};
  const setState=patch=>updateChartState('difference-matrix',{inlineFilters:Object.fromEntries(Object.entries({...state,...patch}).filter(([,value])=>value!==undefined))});
- const competitor=RIVALS.includes(state.competitor)?state.competitor:'ШИНСЕРВИС';
+ const rivals=[...new Set([...RIVALS,...(queries.tariffs?.rows||[]).map(r=>r.company),...(queries.competitor_review?.rows||[]).map(r=>r.company)])].filter(c=>c!==OWN);
+ const competitor=rivals.includes(state.competitor)?state.competitor:'ШИНСЕРВИС';
  const type=state.type==='Колёса в сборе'?'Колёса в сборе':'Шины без дисков';
  const period=state.period==='1'?'1':'season',view=Object.hasOwn(viewOptions,state.view)?state.view:'paired';
  const queryId=LOCAL.includes(competitor)?'spb_competition':'tariffs';
@@ -222,7 +223,7 @@ function DifferencePage(){
  const centerColumns=[{field:'city',label:'Город ТСЦ'},{field:'name',label:'ТСЦ'},{field:'address',label:'Адрес'},{field:'centerStatus',label:'Статус ТСЦ'},{field:'centerAlert',label:'Изменения адреса'},{field:'storageStatus',label:'Хранение'},{field:'tariffScopeNote',label:'Связь с тарифом'},{field:'checkStatus',label:'Перепроверка'},{field:'date',label:'Дата сведений'},{field:'source',label:'Источник',renderCell:link$2}];
  return jsxRuntime.jsxs('div', { className: "ks-difference", children: [
  jsxRuntime.jsxs(dataApp.Filters, { filters: [], queries: queries, values: filters, onChange: setFilter, sticky: true, ariaLabel: "Параметры разницы цен"  , children: [
- jsxRuntime.jsx(dataApp.Dropdown, { label: "Сравнить с" , showLabel: true, value: competitor, choices: RIVALS, choiceLabels: Object.fromEntries(RIVALS.map(c=>[c,companyLabel(c)])), onChange: v=>setState({competitor:v,region:'all',view:'paired',selectedCity:undefined,selectedDiameter:undefined}),})
+ jsxRuntime.jsx(dataApp.Dropdown, { label: "Сравнить с" , showLabel: true, value: competitor, choices: rivals, choiceLabels: Object.fromEntries(rivals.map(c=>[c,companyLabel(c)])), onChange: v=>setState({competitor:v,region:'all',view:'paired',selectedCity:undefined,selectedDiameter:undefined}),})
  , jsxRuntime.jsx(dataApp.SegmentedControl, { label: "Вид хранения" , options: [{value:'Шины без дисков',label:'Без дисков'},{value:'Колёса в сборе',label:'На дисках'}], value: type, onChange: v=>setState({type:v}),})
  , jsxRuntime.jsx(dataApp.Dropdown, { label: "Срок", showLabel: true, value: period, choices: ['season','1'], choiceLabels: {season:'Сезонный пакет','1':'1 месяц'}, onChange: v=>setState({period:v}),})
  , jsxRuntime.jsx(dataApp.Dropdown, { label: "Регион", showLabel: true, searchable: true, allLabel: "Все регионы" , value: region, choices: ['all',...regions], choiceLabels: {all:'Все регионы'}, onChange: v=>setState({region:v,selectedCity:undefined}),})
@@ -361,6 +362,18 @@ function MoscowFocus({all,promotions,diameter,type,period,onShowSeason}){
  ]});
 }
 
+function competitorsForCity(city, ...datasets) {
+ return [...new Set(datasets.flat().filter(row => canonicalCity(row.comparisonCity || row.city) === canonicalCity(city)).map(row => row.company).filter(Boolean))];
+}
+
+function localCompetitors(companies) {
+ return [...new Set([...LOCAL_COMPETITORS, ...companies])].filter(company => companies.includes(company) && !COMPANIES.includes(company));
+}
+
+function newCompanyCardId(prefix, company) {
+ return `${prefix}-offer-company-${Array.from(company, c => c.codePointAt(0).toString(16)).join('-')}`;
+}
+
 const KR='Колесо (koleso-russia.ru)',TY='Эксклюзив (ty.ru)';
 const groups=[{id:'reference',title:'Колесо.ру',companies:['Колесо.ру']},{id:'main',title:'Основные конкуренты',companies:MAIN_COMPETITORS},{id:'local',title:'Локальные конкуренты',companies:LOCAL_COMPETITORS}];
 const groupLabel=company=>groups.find(g=>g.companies.includes(company))?.title||'Локальные конкуренты';
@@ -381,42 +394,46 @@ function CityFocus({city,diameter,type,period,onShowSeason}){
  const all=(queries[queryId]?.rows||[]).filter(r=>canonicalCity(r.city)===city);
  const centers=(queries.centers?.rows||[]).filter(c=>canonicalCity(c.comparisonCity||c.city)===city);
  const conditional=(queries.additional_offers?.rows||[]).filter(r=>canonicalCity(r.city)===city);
- const present=new Set([...all,...centers,...conditional].map(r=>r.company));
+ const reviews=(queries.competitor_review?.rows||[]).filter(r=>canonicalCity(r.city)===city);
+ const present=new Set(competitorsForCity(city,all,centers,conditional,reviews));
+ const cityGroups=groups.map(g=>g.id==='local'?{...g,companies:localCompetitors([...present])}:g);
  const selected=selectRates(all,{diameter,type,period}),general=selectRates(all,{diameter,type:'Вид не разделён',period});
  const prices=[...present].flatMap(co=>cityOffer(selected,general,city,co).rows).filter(r=>Number.isFinite(r.price));
  const scope={city,diameter:`R${diameter}`,type,period};
  const prefix=isSpb?'spb':'city';
- const companyOrder=['Колесо.ру',...MAIN_COMPETITORS,...LOCAL_COMPETITORS];
+ const companyOrder=cityGroups.flatMap(g=>g.companies);
  const details=[...prices].sort((a,b)=>companyOrder.indexOf(a.company)-companyOrder.indexOf(b.company)).map(r=>({...tariffDisplay(r),group:groupLabel(r.company),category:r.vehicleClass==='Не разделено сетью'?'Класс не разделён':r.vehicleClass||'Класс не разделён',quantityLabel:r.quantity===4?'4 шт.':'Количество уточнить',diameterScope:r.diameterUndifferentiated?'Общий прайс; диаметр уточнить':r.diameterLabel||`R${r.rmin}–R${r.rmax}`}));
  const promos=isSpb?(queries.spb_promotions?.rows||[]):(queries.promotions?.rows||[]).filter(p=>p.location===city||(city==='Москва'&&p.location==='Москва и область')).map(p=>({...p,company:p.company||'ШИНСЕРВИС'}));
  const promoQuery=isSpb?'spb_promotions':'promotions';
  return jsxRuntime.jsxs(jsxRuntime.Fragment, { children: [
  jsxRuntime.jsxs(dataApp.Section, { id: `${prefix}-heading`, title: `${city} · R${diameter}`, spacing: "content", children: [
- jsxRuntime.jsx('p', { className: "ks-table-note", children: "Показаны сети с найденными тарифами или ТСЦ в выбранном городе. Состав конкурентов сохраняется при смене диаметра и срока; отсутствие цены отмечено отдельно."                     })
+ jsxRuntime.jsx('p', { className: "ks-table-note", children: "Показаны конкуренты из Google-таблицы и найденных источников по выбранному городу. Состав конкурентов сохраняется при смене диаметра и срока; отсутствие цены отмечено отдельно."                     })
  , jsxRuntime.jsx('div', { className: "ks-spb-competitor-groups", children: 
- groups.map(group=>{
+ cityGroups.map(group=>{
  const companies=group.companies.filter(co=>co==='Колесо.ру'||present.has(co));
  return jsxRuntime.jsxs('section', { className: `ks-spb-group ks-spb-group-${group.id}`, 'aria-labelledby': `${prefix}-group-${group.id}`, children: [jsxRuntime.jsx('h3', { id: `${prefix}-group-${group.id}`, className: "ks-spb-group-title", children: group.id==='reference'?jsxRuntime.jsx(CompanyName, { children: group.title}):group.title})
  , companies.length?jsxRuntime.jsx(dataApp.SortableRegion, { id: `${prefix}:offers:${group.id}`, authoredRevision: 2, variant: "freeform", className: "ks-price-grid ks-spb-group-grid" , children: 
  companies.map(co=>{
  const legacyOrder=['Колесо.ру','ШИНСЕРВИС','Колёса Даром',KR,TY,'Иванор','Мосавтошина','Колобокс'];
- const index=(isSpb?legacyOrder:[...COMPANIES,...LOCAL_COMPETITORS]).indexOf(co),id=`${prefix}-offer-${index}`;
- const source=prices.filter(r=>r.company===co),base=co===KR?source.filter(r=>r.loyalty==='Без карты'):source,card=source.filter(r=>r.loyalty==='По карте');
+ const index=(isSpb?legacyOrder:[...COMPANIES,...LOCAL_COMPETITORS]).indexOf(co),id=index>=0?`${prefix}-offer-${index}`:newCompanyCardId(prefix,co);
+ const companyReviews=reviews.filter(r=>r.company===co),review=companyReviews[0];
+ const source=prices.filter(r=>r.company===co),base=(co===KR?source.filter(r=>r.loyalty==='Без карты'):source).filter(r=>r.recordKind!=='optional_package'),card=source.filter(r=>r.loyalty==='По карте');
  const known=all.filter(r=>r.company===co&&r.recordKind==='availability');
  const rows=source.length?source:known;
  const seasonAvailable=period==='1'&&[...selectRates(all,{diameter,type,period:'season'}),...selectRates(all,{diameter,type:'Вид не разделён',period:'season'})].some(r=>r.company===co&&Number.isFinite(r.price));
  const companyCenters=centers.filter(c=>c.company===co);
- return jsxRuntime.jsx(dataApp.SortableItem, { id: id, kind: "custom", label: co, children: jsxRuntime.jsx(dataApp.DataComponent, { id: id, queryId: queryId, queryIds: [queryId,'centers'], className: `ks-company-card ${co==='Колесо.ру'?'ks-koleso-card':''}`, kind: "custom", title: companyLabel(co), variant: "card", displayRows: rows, sourceRowsByQuery: {[queryId]:rows,centers:companyCenters}, scopeFilters: describeScope({...scope,company:co}), children: jsxRuntime.jsxs('div', { className: "ks-quote", 'data-reviewed-rows': true, children: [
- jsxRuntime.jsxs('span', { className: "ks-territory", children: [city, " · "  , co===KR?'без карты':co===TY?'расчёт Hongqi HS5':'базовый тариф']})
+ return jsxRuntime.jsx(dataApp.SortableItem, { id: id, kind: "custom", label: co, children: jsxRuntime.jsx(dataApp.DataComponent, { id: id, queryId: queryId, queryIds: [queryId,'centers','competitor_review'], className: `ks-company-card ${co==='Колесо.ру'?'ks-koleso-card':''}`, kind: "custom", title: companyLabel(co), variant: "card", displayRows: rows.length?rows:companyReviews, sourceRowsByQuery: {[queryId]:rows,centers:companyCenters,competitor_review:companyReviews}, scopeFilters: describeScope({...scope,company:co}), children: jsxRuntime.jsxs('div', { className: "ks-quote", 'data-reviewed-rows': true, children: [
+ jsxRuntime.jsxs('span', { className: "ks-territory", children: [city, " · "  , co===KR?'без карты':co===TY?'расчёт Hongqi HS5':base.some(r=>['published_unqualified','indexed_tariff'].includes(r.recordKind))?'опубликованная сумма; условия уточнить':'базовый тариф']})
  , jsxRuntime.jsx('div', { className: "ks-price", children: base.length?priceText(base):'—'})
  , jsxRuntime.jsx('div', { className: "ks-package", children: co==='Иванор'&&base.some(r=>r.months===null)?'Сроки ТСЦ различаются; см. условия':unique(base,'period')||'Цена на выбранный срок не подтверждена'})
  , card.length>0&&jsxRuntime.jsxs('p', { className: "ks-range", children: ["По карте: "  , jsxRuntime.jsx('b', { children: priceText(card)})]})
  , jsxRuntime.jsx(PriceStatus, { rows: base.length?base:known,}), !base.length&&jsxRuntime.jsx(MissingPrice, { seasonAvailable: seasonAvailable, onShowSeason: onShowSeason,})
  , base.length>0&&jsxRuntime.jsxs('p', { className: "ks-card-note", children: [notes[co]||unique(base,'cardNote')||'Цена относится к сроку, комплектности и ТСЦ из источника.', base.some(r=>r.type==='Вид не разделён')&&co!=='Колобокс'&&' Вид хранения в источнике не разделён; уточните применимость.']})
  , !base.length&&(known.some(r=>r.storageConfirmed)||companyCenters.some(c=>c.storageConfirmed))&&jsxRuntime.jsx('p', { className: "ks-card-note", children: "Хранение заявлено в источнике; точная цена выбранного варианта не подтверждена. Условия и адреса — ниже."              })
+ , !base.length&&review&&jsxRuntime.jsxs('div', { className: "ks-card-note", children: [jsxRuntime.jsx('b', { children: review.result}), jsxRuntime.jsx('p', { children: review.note}), link(review.source)]})
  , jsxRuntime.jsx(TariffSources, { id: id, rows: rows, centers: companyCenters, queryId: queryId, company: co, scope: scope,})
  ]})})}, co);
- })}):jsxRuntime.jsx('p', { className: "ks-table-note", children: group.id==='local'?'Локальные конкуренты этого города пока не добавлены.':'Данные основных конкурентов этого города пока не найдены.'})
+ })}):jsxRuntime.jsx('p', { className: "ks-table-note", children: group.id==='local'?'В текущем списке для этого города локальные конкуренты не указаны; проверенные предложения местных компаний пока не найдены.':'Данные основных конкурентов этого города пока не найдены.'})
  ]}, group.id);
  })
  })
@@ -439,13 +456,13 @@ function CellQuote({value}){return jsxRuntime.jsxs('div', { className: "ks-cell-
 function DashboardContent(){
  const {snapshot,queries,filters,setFilter,chartStates,updateChartState}=dataApp.useDataApp();
  const {activeTabId}=dataApp.useDashboardTabs(tabs);const tab=activeTabId||'compare';
- const all=queries.tariffs?.rows||[],inventory=queries.coverage?.rows||[];
+ const all=queries.tariffs?.rows||[],inventory=queries.coverage?.rows||[],reviews=queries.competitor_review?.rows||[];
  const state=chartStates?.['storage-context']?.inlineFilters||{};
  const requestedDiameter=Number(state.diameter||16);
  const diameter=Number.isInteger(requestedDiameter)&&requestedDiameter>=13&&requestedDiameter<=26?requestedDiameter:16,type=typeOptions.some(option=>option.value===state.type)?state.type:'Шины без дисков',period=state.period==='1'?'1':'season';
  const setContext=patch=>updateChartState('storage-context',{inlineFilters:{...state,...patch}});
  const cities=react.useMemo(()=>[...new Set(all.filter(r=>Number.isFinite(r.price)).map(r=>canonicalCity(r.city)))].sort(cmp),[all]);
- const coverageCities=[...new Set([...inventory.map(r=>canonicalCity(r.city)),...cities])].sort(cmp);
+ const coverageCities=[...new Set([...inventory.map(r=>canonicalCity(r.city)),...reviews.map(r=>canonicalCity(r.city)),...cities])].sort(cmp);
  const cityChoices=tab==='coverage'?coverageCities:cities;
  const requestedCity=canonicalCity(state.city||'Москва');
  const city=requestedCity==='all'||cityChoices.includes(requestedCity)?requestedCity:'all';
@@ -456,7 +473,7 @@ function DashboardContent(){
  const matrix=scopedCities.map(c=>{const result={city:c,region:inventory.find(x=>x.city===c)?.region};COMPANIES.forEach((co,i)=>{const q=cityOffer(selected,general,c,co);result[`q${i}`]=q;result[`c${i}`]=`${q.label}${q.period?` · ${q.period}`:''}${q.generalOnly?' · общий тариф, вид не разделён':''}`;});return result;});
  const matrixColumns=[{field:'city',label:'Город',presentation:'identity',secondaryField:'region'},...COMPANIES.map((co,i)=>({field:`c${i}`,label:companyLabel(co),renderCell:(v,row)=>jsxRuntime.jsx(CellQuote, { value: row[`q${i}`],})}))];
  const coverageRows=inventory.filter(c=>city==='all'||canonicalCity(c.city)===city).map(c=>({city:c.city,region:c.region,...Object.fromEntries(COMPANIES.map((co,i)=>[`c${i}`,coverageEvidence(all,c.city,co,snapshot.refresh?.date)]))}));
- const localRows=[...new Set(all.filter(r=>!COMPANIES.includes(r.company)&&(city==='all'||canonicalCity(r.city)===city)).map(r=>`${canonicalCity(r.city)}|${r.company}`))].sort(cmp).map(key=>{const [c,company]=key.split('|');return {city:c,company,status:coverageEvidence(all,c,company,snapshot.refresh?.date)};});
+ const localRows=[...new Set([...all,...reviews].filter(r=>!COMPANIES.includes(r.company)&&(city==='all'||canonicalCity(r.city)===city)).map(r=>`${canonicalCity(r.city)}|${r.company}`))].sort(cmp).map(key=>{const [c,company]=key.split('|');const review=reviews.find(r=>r.city===c&&r.company===company);return {city:c,company,service:review?.result||'См. сведения в источниках',status:coverageEvidence(all,c,company,snapshot.refresh?.date),source:review?.source};});
  const pricedCities=new Set(all.filter(r=>Number.isFinite(r.price)).map(r=>canonicalCity(r.city)));
  const checkedCities=new Set(all.filter(r=>Number.isFinite(r.price)&&isCurrent(r,snapshot.refresh?.date)).map(r=>canonicalCity(r.city)));
  const promoLocations=[...new Set((queries.promotions?.rows||[]).map(p=>p.location))];
@@ -483,7 +500,7 @@ function DashboardContent(){
  , tab==='terms'&&jsxRuntime.jsxs(jsxRuntime.Fragment, { children: [jsxRuntime.jsx(dataApp.Section, { id: "conditions-heading", title: "Что входит и как забрать комплект"     , spacing: "content", children: jsxRuntime.jsx(dataApp.SortableRegion, { id: "storage:terms", variant: "freeform", className: "ks-price-grid", children: COMPANIES.map((co,i)=>jsxRuntime.jsx(dataApp.SortableItem, { id: `terms-${i}`, kind: "custom", label: co, children: jsxRuntime.jsx(dataApp.DataComponent, { id: `terms-${i}`, queryId: "conditions", className: `ks-company-card ${co==='Колесо.ру'?'ks-koleso-card':''}`, title: companyLabel(co), variant: "card", kind: "custom", displayRows: queries.conditions.rows.filter(r=>r.company===co), sourceRows: queries.conditions.rows.filter(r=>r.company===co), children: jsxRuntime.jsx('dl', { className: "ks-terms", 'data-reviewed-rows': true, children: queries.conditions.rows.filter(r=>r.company===co).map((r,j)=>jsxRuntime.jsxs('div', { children: [jsxRuntime.jsx('dt', { children: r.item}), jsxRuntime.jsxs('dd', { children: [r.value, r.checkStatus&&jsxRuntime.jsx('p', { className: "ks-price-status", children: r.checkStatus}), r.source&&jsxRuntime.jsx('a', { href: r.source, target: "_blank", rel: "noreferrer", children: "Официальные условия ↗"  })]})]}, j))})})}, co))})})
  , jsxRuntime.jsx(dataApp.Section, { id: "promotions-heading", title: "Акции сетей и отдельных центров"    , spacing: "section", filters: jsxRuntime.jsx(dataApp.Filters, { filters: [], queries: queries, values: filters, onChange: setFilter, ariaLabel: "Территория локальных акций"  , children: jsxRuntime.jsx(dataApp.Dropdown, { label: "Территория акции" , allLabel: "Все территории" , showLabel: true, value: promoLocation, choices: ['all',...promoLocations], choiceLabels: {all:'Все территории'}, onChange: v=>setContext({promoLocation:v}),})}), children: jsxRuntime.jsxs(dataApp.DataComponent, { id: "local-promotions", queryId: "promotions", kind: "table", title: `Акции отдельных центров · ${promoLocation==='all'?'все территории':promoLocation}`, variant: "card", displayRows: promoRows.map(p=>({company:p.company,center:p.center_name,description:p.description,checkStatus:p.checkStatus,date:p.date,source:p.page_url})), sourceRows: promoRows, scopeFilters: describeScope({location:promoLocation}), children: [jsxRuntime.jsx('p', { children: "Общие условия выше относятся к сетям. Здесь показаны акции конкретных центров и сетевые предложения с отдельной отметкой. Для сетевых акций участие выбранного ТСЦ нужно уточнить. Срок, территория и обязательные покупки указаны в условиях каждой акции; если срок не опубликован, это отмечено отдельно. Подтвердите предложение в выбранном центре. Эти цены не включены в обычные тарифы выше."                                                      }), promoRows.length?jsxRuntime.jsx('div', { className: "ks-promo-grid", 'data-reviewed-rows': true, children: promoRows.map(p=>jsxRuntime.jsxs('div', { className: "ks-promo", children: [jsxRuntime.jsxs('h3', { children: [companyLabel(p.company), " · "  , p.center_name]}), jsxRuntime.jsx('span', { className: "ks-territory", children: p.location}), jsxRuntime.jsx('p', { children: p.description}), p.checkStatus&&jsxRuntime.jsx('p', { className: "ks-price-status", children: p.checkStatus}), p.scopeNote&&jsxRuntime.jsx('p', { children: p.scopeNote}), p.period_note&&jsxRuntime.jsx('p', { children: p.period_note}), jsxRuntime.jsx('a', { href: p.page_url, target: "_blank", rel: "noreferrer", children: "Условия центра ↗"  })]}, p.id))}):jsxRuntime.jsx('p', { className: "ks-empty", children: "Для выбранной территории предложения в снимке не найдены. Выберите «Все территории»."          })]})})]})
  , tab==='coverage'&&jsxRuntime.jsxs(dataApp.Section, { id: "coverage-heading", title: "Полнота региональных данных"  , spacing: "content", children: [jsxRuntime.jsx('p', { className: "ks-table-note", children: "Сводка по всему снимку. Фильтр «Город» изменяет таблицы ниже. Наличие старой цены не означает её подтверждение сегодня."                }), jsxRuntime.jsxs('div', { className: "ks-coverage-summary", children: [jsxRuntime.jsxs('div', { children: [jsxRuntime.jsx('b', { children: coverageCities.length}), jsxRuntime.jsx('span', { children: "городов в снимке"  })]}), jsxRuntime.jsxs('div', { children: [jsxRuntime.jsx('b', { children: pricedCities.size}), jsxRuntime.jsx('span', { children: "городов хотя бы с одной сохранённой ценой"      })]}), jsxRuntime.jsxs('div', { children: [jsxRuntime.jsx('b', { children: checkedCities.size}), jsxRuntime.jsxs('span', { children: ["городов хотя бы с одним тарифом, подтверждённым "       , snapshot.refresh?.date]})]})]}), jsxRuntime.jsx('p', { children: "Москва и МО, Краснодар и край, Ростов-на-Дону и область объединены по рынкам; исходные адреса сохранены. Это охват собранных источников, а не действующий список складов. Статус рассчитывается по тарифам каждой компании; наличие цены не подтверждает все виды хранения, диаметры и центры."                                       }), jsxRuntime.jsx(dataApp.DataComponent, { id: "coverage-table", className: "ks-company-columns", queryId: "coverage", queryIds: ['coverage','tariffs'], kind: "table", title: "Основные сети · наличие и свежесть цен"      , variant: "card", sourceRowsByQuery: {coverage:inventory.filter(c=>city==='all'||canonicalCity(c.city)===city),tariffs:all.filter(r=>city==='all'||canonicalCity(r.city)===city)}, displayRows: coverageRows, scopeFilters: describeScope({city}), children: jsxRuntime.jsx(dataApp.DataTable, { label: "Наличие и подтверждение цен"   , columns: [{field:'city',label:'Город',presentation:'identity',secondaryField:'region'},...COMPANIES.map((co,i)=>({field:`c${i}`,label:companyLabel(co),renderCell:v=>jsxRuntime.jsx('span', { className: "ks-coverage-status", children: v})}))], rows: coverageRows,})})
- , jsxRuntime.jsx(dataApp.DataComponent, { id: "coverage-local", queryId: "tariffs", kind: "table", title: "Другие сети и локальные конкуренты"    , variant: "card", displayRows: localRows, sourceRows: all.filter(r=>!COMPANIES.includes(r.company)&&(city==='all'||canonicalCity(r.city)===city)), scopeFilters: describeScope({city}), children: jsxRuntime.jsx(dataApp.DataTable, { label: "Локальные конкуренты: наличие и свежесть цен"     , columns: [{field:'city',label:'Город'},{field:'company',label:'Компания'},{field:'status',label:'Проверка цен'}], rows: localRows,})})]})
+ , jsxRuntime.jsx(dataApp.DataComponent, { id: "coverage-local", queryId: "tariffs", queryIds: ['tariffs','competitor_review'], kind: "table", title: "Другие сети и локальные конкуренты"    , variant: "card", displayRows: localRows, sourceRowsByQuery: {tariffs:all.filter(r=>!COMPANIES.includes(r.company)&&(city==='all'||canonicalCity(r.city)===city)),competitor_review:reviews.filter(r=>!COMPANIES.includes(r.company)&&(city==='all'||r.city===city))}, scopeFilters: describeScope({city}), children: jsxRuntime.jsx(dataApp.DataTable, { label: "Локальные конкуренты: наличие и свежесть цен"     , columns: [{field:'city',label:'Город'},{field:'company',label:'Компания'},{field:'service',label:'Статус услуги'},{field:'status',label:'Проверка цен'},{field:'source',label:'Источник',renderCell:v=>v?jsxRuntime.jsx('a', { href: v, target: "_blank", rel: "noreferrer", children: "Открыть ↗" }):'—'}], rows: localRows,})})]})
  , jsxRuntime.jsx('footer', { className: "ks-footer", children: snapshot.refresh?.summary||'Проверка 22.10.2026 · Обычные цены, локальные акции и неподтверждённые сведения разделены.'})]});
 }
 
@@ -511,5 +528,5 @@ else {
     }).catch(() => { if (root) root.textContent = "The reviewed data could not be loaded. Serve this complete build over local HTTP, or export a standalone offline HTML file."; });
 }
 })();</script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5109c604be25831',t:'MTc5MzA5MjY3OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a51254f49eaf602a',t:'MTc5MzExMDcyNQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
