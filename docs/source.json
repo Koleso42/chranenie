@@ -1,10 +1,10 @@
 {
   "source": "https://koleso-tire-storage-regions.stonyrose8.chatgpt.site",
-  "sourceSnapshotSha256": "02c6be172a049bf78496f36374d7ac8ae598997f9fe21a2267a0d172b6eb99dc",
+  "sourceSnapshotSha256": "9166e72df391a049b08bddeab8e0e9b958abd3ddb586312d088dab1912b8a9a3",
   "dataRefresh": {
-    "date": "2026-10-29",
-    "dateLabel": "29 октября 2026",
-    "summary": "Частичная проверка 29.10.2026; подтверждено записей: 1710. Неподтверждённые цены и даты сохранены.",
+    "date": "2026-10-30",
+    "dateLabel": "30 октября 2026",
+    "summary": "Частичная проверка 30.10.2026. Обновлён адресный прайс Колобокса; неподтверждённые данные сохранены с прежними датами.",
     "competitorList": {
       "rows": 72,
       "cities": 21,
@@ -21,5 +21,5 @@
       "basis": "Опубликованные суммы из ранее проверенного источника, подтверждённые пользователем; без повторной проверки страницы и без пересчёта единиц."
     }
   },
-  "snapshotFileSha256": "02c6be172a049bf78496f36374d7ac8ae598997f9fe21a2267a0d172b6eb99dc"
+  "snapshotFileSha256": "9166e72df391a049b08bddeab8e0e9b958abd3ddb586312d088dab1912b8a9a3"
 }
