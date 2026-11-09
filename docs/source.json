@@ -1,10 +1,10 @@
 {
   "source": "https://koleso-tire-storage-regions.stonyrose8.chatgpt.site",
-  "sourceSnapshotSha256": "fcecdbb32c06915669da00935f3dcc55d36f8ba9199a382d7e878574509d53c1",
+  "sourceSnapshotSha256": "8e395bf4af578622553788eb1b7250ff3b92247713efab2de20e6408cc30a07a",
   "dataRefresh": {
     "date": "2026-11-09",
     "dateLabel": "9 ноября 2026",
-    "summary": "Частичная перепроверка 09.11.2026. Даты изменены только у подтверждённых строк. Недоступные источники и непроверенные параметры сохранены с прежними датами; расчётные цены отмечены как оценки.",
+    "summary": "Уточнение 09.11.2026: восстановлена проверка 20 ТСЦ Мосавтошины; спорные ТСЦ Колесо.ру отделены от подтверждённых групп. Добавлены расчёты TY для Hongqi HS5 при выбранном центре Белорусская, 7. Неподтверждённые цены и адреса сохранили прежние даты.",
     "competitorList": {
       "rows": 72,
       "cities": 21,
@@ -19,7 +19,21 @@
       "city": "Казань",
       "ranges": 4,
       "basis": "Опубликованные суммы из ранее проверенного источника, подтверждённые пользователем; без повторной проверки страницы и без пересчёта единиц."
+    },
+    "recovery": {
+      "checkedAt": "2026-11-09T10:48:18.850385Z",
+      "scope": "Восстановление проверки ранее неподтверждённых источников; утренние условия и акции не перепроверялись повторно.",
+      "counts": {
+        "mos_tariff_rows": 420,
+        "koleso_confirmed_rows": 1460,
+        "koleso_exception_rows": 100,
+        "koleso_still_stale": 40,
+        "ty_new_scoped_rows": 48,
+        "local_attempt_rows": 104
+      },
+      "priceChanges": [],
+      "tyHistoricalPreserved": true
     }
   },
-  "snapshotFileSha256": "fcecdbb32c06915669da00935f3dcc55d36f8ba9199a382d7e878574509d53c1"
+  "snapshotFileSha256": "8e395bf4af578622553788eb1b7250ff3b92247713efab2de20e6408cc30a07a"
 }
